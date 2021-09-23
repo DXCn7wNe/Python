@@ -1,11 +1,18 @@
 # %matplotlib notebook
+# from IPython.core.debugger import Pdb; Pdb().set_trace()
+#
 from matplotlib import pyplot as plt
-from mpl_toolkits.mplot3d import art3d
-from mpl_toolkits.mplot3d import Axes3D
+from mpl_toolkits.mplot3d import art3d, Axes3D
 from mpl_toolkits.mplot3d.proj3d import proj_transform
 from matplotlib.patches import Circle, FancyArrowPatch
 import numpy as np
 from scipy.spatial.transform import Rotation
+from stl import mesh
+import math
+
+def unit_vec(vec):
+    vec = np.array(vec)
+    return vec / np.linalg.norm(vec)
 
 def pathpatch_translate(pathpatch, delta):
     """
@@ -61,7 +68,7 @@ def _arrow3D(ax, pos, normal, *args, **kwargs):
     ax.add_artist(arrow)
 setattr(Axes3D, 'arrow3D', _arrow3D)
 
-def _origin3D(ax, length=1, pos=(0,0,0), x_vec=(1,0,0), z_vec=(0,0,1)):
+def _origin3D(ax, pos=(0,0,0), length=1, x_vec=(1,0,0), z_vec=(0,0,1)):
     x_axis = (length,0,0)
     y_axis = (0,length,0)
     z_axis = (0,0,length)
@@ -84,26 +91,34 @@ def _circle3D(ax, pos, radius, normal, *args, **kwargs):
 setattr(Axes3D, 'circle3D', _circle3D)
 
 ##
-
+cmap = plt.cm.Set1.colors
 fig = plt.figure()
-ax = fig.gca(projection='3d', xlabel='x', ylabel='y', zlabel='z')
-ax.set_xlim(0,8)
-ax.set_ylim(0,8)
-ax.set_zlim(0,8)
+# proj_type = ['ortho', 'persp']
+ax = fig.add_subplot(projection='3d', proj_type='ortho', xlabel='x', ylabel='y', zlabel='z')
+ax.set_xlim(0,3)
+ax.set_ylim(0,3)
+ax.set_zlim(0,3)
 
 # global
 # ax.origin3D(pos=(0,0,0), z_vec=Rotation.from_euler('ZYX',(0, 45, 45),degrees=True).apply((0,0,1)))
-# ax.origin3D(length=1)
+ax.origin3D(length=1)
 # ax.origin3D(length=2, z_vec=(1,1,1))
 # ax.origin3D(length=3, z_vec=(1,1,1), x_vec=np.cross((1,1,1), (1,1,0)))
-ax.arrow3D((0,0,0), (1,-1,1))
-ax.origin3D(length=3, z_vec=(1,1,1), x_vec=(1,-1,1))
+# ax.arrow3D((0,0,0), (1,-1,1))
+# ax.origin3D(length=3, z_vec=(1,1,1), x_vec=(1,-1,1))
 
 # # face
-# face_pos = (2,5,1)
-# face_z_vec = Rotation.from_euler('ZYX',(0, 45, 0),degrees=True).apply((0,0,1))
-# ax.origin3D(face_pos, face_z_vec)
-# ax.circle3D(face_pos, 1, face_z_vec, color='gray', alpha=0.2)
+face_y_vec = (0,1,0)
+# ax.arrow3D((0,0,0), unit_vec(face_y_vec)*2, color=cmap[0])
+face_y_vec = Rotation.from_euler('ZYX',(0, 45, -30),degrees=True).apply(face_y_vec)
+ax.arrow3D((0,0,0), unit_vec(face_y_vec)*2, color=cmap[1])
+#
+face_nose_vec = (0,0,1)
+# ax.arrow3D((0,0,0), unit_vec(face_nose_vec)*2, color=cmap[2])
+face_nose_vec = Rotation.from_euler('ZYX',(0, 45, -30),degrees=True).apply(face_nose_vec)
+ax.arrow3D((0,0,0), unit_vec(face_nose_vec)*2, color=cmap[3])
+ax.origin3D((0,0,0), length=3, z_vec=face_nose_vec, x_vec=np.cross(face_y_vec, face_nose_vec))
+# ax.circle3D(face_pos, 1, face_nose_vec, color='gray', alpha=0.2)
 
 # # camera
 # camera_pos = (5,5,5)
@@ -117,5 +132,34 @@ ax.origin3D(length=3, z_vec=(1,1,1), x_vec=(1,-1,1))
 # # rot = Rotation.from_euler('ZYX', euler, degrees=True)
 # # ax.arrow3D((0,0,0), rot.apply(vec))
 
+def mesh_update(my_mesh):
+    my_mesh.update_areas()
+    my_mesh.update_max()
+    my_mesh.update_min()
+    my_mesh.update_units()
+    return my_mesh
+
+def mesh_location_zero(my_mesh):
+    midPosRel = (my_mesh.max_ - my_mesh.min_)/2
+    my_mesh.x = my_mesh.x - (midPosRel[0] + my_mesh.min_[0])
+    my_mesh.y = my_mesh.y - (midPosRel[1] + my_mesh.min_[1])
+    my_mesh.z = my_mesh.z - (midPosRel[2] + my_mesh.min_[2])
+    mesh_update(my_mesh)
+    return my_mesh
+
+def mesh_scale(my_mesh, scale_x, scale_y, scale_z):
+    my_mesh.x = my_mesh.x * scale_x
+    my_mesh.y = my_mesh.y * scale_y
+    my_mesh.z = my_mesh.z * scale_z 
+    mesh_update(my_mesh)
+    return my_mesh
+
+# mesh = mesh_scale(mesh_location_zero(mesh.Mesh.from_file('humanheadBlender_reduce.stl')),10,10,10)
+mesh = mesh_scale(mesh_location_zero(mesh.Mesh.from_file('male_head_reduce.stl')),0.05,0.05,0.05)
+# mesh.rotate([0.0, 0.0, 1.0], math.radians(-90))
+# mesh.rotate([1.0, 0.0, 0.0], math.radians(90))
+ax.add_collection3d(art3d.Poly3DCollection(mesh.vectors))
+
 plt.draw()
 plt.show()
+
