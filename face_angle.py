@@ -3,7 +3,10 @@
 import numpy as np
 from scipy.spatial.transform import Rotation
 import pyvista as pv
+import head_pose_wi_mediapipe as hp
 
+model_path = './models/Pasha_guard_head/Pasha_guard_head.obj'
+texture_path = './models/Pasha_guard_head/Pasha_guard_head_0.png'
 
 def unit_vec(vec):
     vec = np.array(vec)
@@ -41,52 +44,38 @@ def _add_axis_vec(plt, pos=(0,0,0), length=1, x_vec=(1,0,0), z_vec=(0,0,1)):
     plt.add_mesh(axis_z, color='blue')
 setattr(pv.Plotter, 'add_axis_vec', _add_axis_vec)
 
-##
-plt = pv.Plotter()
+## canvas
+# plt = pv.Plotter(off_screen=True)
+plt = pv.Plotter(off_screen=False)
 plt.add_axes_at_origin()
-#
-face_pos = np.array((2,0,0))
-face_mesh = pv.read('male_head_reduce.stl')
-face_mesh.scale(0.02)
-face_rot = Rotation.from_euler('ZYX',(0, 45, -30),degrees=True)
-face_mesh.rotate_vector(face_rot.as_rotvec(), np.rad2deg(np.linalg.norm(face_rot.as_rotvec())))
+# axes = pv.Axes(show_actor=True, actor_scale=2.0, line_width=5)
+# axes.origin = (3.0, 3.0, 3.0)
+
+## face
+face_pos = np.array((0,0,0))
+# face_rot = Rotation.from_euler('ZYX',(0, 45, -30),degrees=True)
+face_rot = Rotation.from_euler('ZYX',(0, 0, -90),degrees=True)
 face_x_vec = face_rot.apply(np.array((1,0,0)))
 face_z_vec = face_rot.apply(np.array((0,0,1)))
+#
+face_mesh = pv.read(model_path)
+face_tex = pv.read_texture(texture_path)
+face_mesh.scale(0.004)
+face_mesh.rotate_vector(face_rot.as_rotvec(), np.rad2deg(np.linalg.norm(face_rot.as_rotvec())))
 face_mesh.translate(face_pos)
-plt.add_mesh(face_mesh)
-plt.add_axis_vec(face_pos, x_vec=face_x_vec, z_vec=face_z_vec)
+plt.add_mesh(face_mesh, texture=face_tex)
+# plt.add_axis_vec(face_pos, x_vec=face_x_vec, z_vec=face_z_vec)
+
+## camera
+plt.camera.position = (3,0,3)
+plt.camera.focal_point = (0,0,0)
+# plt.camera.roll = 0
+plt.camera.up=(0,1,0)
+# plt.camera.view_angle=60
+
+# ## plot
+# plt.screenshot('a.jpg')
 plt.show()
 
-
-## # face
-#face_y_vec = (0,1,0)
-## ax.arrow3D((0,0,0), unit_vec(face_y_vec)*2, color=cmap[0])
-#face_y_vec = Rotation.from_euler('ZYX',(0, 45, -30),degrees=True).apply(face_y_vec)
-#ax.arrow3D((0,0,0), unit_vec(face_y_vec)*2, color=cmap[1])
-##
-#face_nose_vec = (0,0,1)
-## ax.arrow3D((0,0,0), unit_vec(face_nose_vec)*2, color=cmap[2])
-#face_nose_vec = Rotation.from_euler('ZYX',(0, 45, -30),degrees=True).apply(face_nose_vec)
-#ax.arrow3D((0,0,0), unit_vec(face_nose_vec)*2, color=cmap[3])
-#ax.origin3D((0,0,0), length=3, z_vec=face_nose_vec, x_vec=np.cross(face_y_vec, face_nose_vec))
-## ax.circle3D(face_pos, 1, face_nose_vec, color='gray', alpha=0.2)
-
-# # camera
-# camera_pos = (5,5,5)
-# camera_z_vec = (1, 0, 0)
-# camera_z_vec /= np.linalg.norm(camera_z_vec)
-# ax.origin3D(camera_pos, camera_z_vec)
-
-# # vec = np.array([1,0,0])
-# # ax.arrow3D((0,0,0), vec)
-# # euler = np.array([ 0, 45, 0])
-# # rot = Rotation.from_euler('ZYX', euler, degrees=True)
-# # ax.arrow3D((0,0,0), rot.apply(vec))
-
-
-# mesh = mesh_scale(mesh_location_zero(mesh.Mesh.from_file('humanheadBlender_reduce.stl')),10,10,10)
-# mesh = mesh_scale(mesh_location_zero(mesh.Mesh.from_file('male_head_reduce.stl')),0.05,0.05,0.05)
-# mesh.rotate([0.0, 0.0, 1.0], math.radians(-90))
-# mesh.rotate([1.0, 0.0, 0.0], math.radians(90))
-# ax.add_collection3d(art3d.Poly3DCollection(mesh.vectors))
-
+# ## meidapipe
+# result = hp.proc_image('a.jpg')
